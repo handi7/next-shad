@@ -1,21 +1,163 @@
-import * as React from "react"
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import { Label } from "./label";
+import { ClassValue } from "clsx";
+import { Control, Controller, FieldValues, Path, RegisterOptions } from "react-hook-form";
+import { requiredErrorMessage } from "@/lib/constants";
 
-function Input({ className, type, ...props }: React.ComponentProps<"input">) {
+export type InputProps = React.ComponentProps<"input"> & {
+  label?: string;
+  horizontalLabel?: boolean;
+  isRequired?: boolean;
+  isInvalid?: boolean;
+  errorMessage?: string;
+  leftContent?: React.ReactNode;
+  rightContent?: React.ReactNode;
+  classNames?: {
+    base?: ClassValue;
+    label?: ClassValue;
+    innerWrapper?: ClassValue;
+    leftContentWrapper?: ClassValue;
+    rightContentWrapper?: ClassValue;
+    input?: ClassValue;
+    errorMessage?: ClassValue;
+  };
+};
+
+function Input(props: InputProps) {
+  const {
+    className,
+    classNames,
+    type,
+    label,
+    horizontalLabel,
+    isRequired,
+    isInvalid,
+    errorMessage,
+    leftContent,
+    rightContent,
+    ...rest
+  } = props;
+
+  const defaultId = `${new Date().getTime()}_input`;
+
   return (
-    <input
-      type={type}
-      data-slot="input"
+    <div
       className={cn(
-        "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input flex h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
-        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+        "flex flex-col items-start gap-2",
+        { "sm:flex-row": horizontalLabel },
+        classNames?.base,
         className
       )}
-      {...props}
-    />
-  )
+    >
+      <Label
+        suppressHydrationWarning
+        htmlFor={props.id || defaultId}
+        className={cn(
+          "",
+          { "text-destructive": isInvalid },
+          { "sm:w-40 sm:min-w-40 sm:max-w-40 sm:my-2.5": horizontalLabel },
+          { hidden: !label },
+          classNames?.label
+        )}
+      >
+        {label}
+        <span className={cn("text-xs text-destructive font-semibold", { hidden: !isRequired })}>
+          *
+        </span>
+      </Label>
+
+      <div className={cn("w-full flex flex-col gap-1")}>
+        <div
+          className={cn(
+            "flex gap-2 text-sm overflow-hidden",
+            "border rounded-md transition-all",
+            "focus-within:ring-2 focus-within:ring-ring focus-within:border-ring",
+            { "border-destructive": isInvalid },
+            classNames?.innerWrapper
+          )}
+        >
+          <div
+            className={cn(
+              "flex justify-center items-center pl-2",
+              { hidden: !leftContent },
+              classNames?.leftContentWrapper
+            )}
+          >
+            {leftContent}
+          </div>
+
+          <input
+            suppressHydrationWarning
+            id={defaultId}
+            type={type}
+            data-slot="input"
+            aria-invalid={isInvalid}
+            className={cn(
+              "w-full bg-transparent outline-none text-sm py-2",
+              "aria-invalid:text-destructive aria-invalid:placeholder:text-destructive/70",
+              { "pl-2": !leftContent },
+              { "pr-2": !rightContent },
+              classNames?.input
+            )}
+            {...rest}
+          />
+
+          <div
+            className={cn(
+              "flex justify-center items-center pr-2",
+              { hidden: !rightContent },
+              classNames?.rightContentWrapper
+            )}
+          >
+            {rightContent}
+          </div>
+        </div>
+
+        <span
+          className={cn(
+            "text-xs text-destructive",
+            { hidden: !isInvalid },
+            classNames?.errorMessage
+          )}
+        >
+          {errorMessage}
+        </span>
+      </div>
+    </div>
+  );
 }
 
-export { Input }
+interface WithControlProps<T extends FieldValues> extends InputProps {
+  name: Path<T>;
+  control: Control<T>;
+  rules?: RegisterOptions<T>;
+}
+
+function WithControl<T extends FieldValues>(props: WithControlProps<T>) {
+  const { control, name, rules = {}, ...rest } = props;
+
+  if (props.isRequired) rules.required = requiredErrorMessage;
+
+  return (
+    <Controller
+      control={control}
+      name={name}
+      rules={rules}
+      render={({ field, fieldState }) => (
+        <Input
+          {...field}
+          value={field.value ?? ""}
+          isInvalid={fieldState.invalid}
+          errorMessage={fieldState.error?.message}
+          {...rest}
+        />
+      )}
+    />
+  );
+}
+
+Input.WithRHFControl = WithControl;
+
+export { Input };

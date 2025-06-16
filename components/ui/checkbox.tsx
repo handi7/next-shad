@@ -76,7 +76,11 @@ function Group(props: GroupProps) {
     className
   );
 
-  const labelClassName = cn("", { "w-40 max-w-40": horizontalLabel }, classNames?.label);
+  const labelClassName = cn(
+    "",
+    { "sm:w-40 sm:min-w-40 sm:max-w-40": horizontalLabel },
+    classNames?.label
+  );
 
   return (
     <div className={baseClassName}>
